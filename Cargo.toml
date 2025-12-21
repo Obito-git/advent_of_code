@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 md5 = "0.8.0"
 itoa = "1.0.15"
+itertools = "0.14.0"
