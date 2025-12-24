@@ -1,7 +1,6 @@
 // https://adventofcode.com/2015/day/12
 
 use advent_of_code::read_input;
-use std::collections::HashMap;
 
 fn can_be_number(c: &char) -> bool {
     c.is_numeric() || *c == '-'
@@ -26,36 +25,51 @@ fn part1(input: &str) -> i32 {
 }
 
 fn part2(input: &[u8]) -> i32 {
-    let mut curly_level = 0;
-    let mut res = 0;
-    let mut map: HashMap<i32, Vec<i32>> = HashMap::new();
+    let mut stack: Vec<(i32, bool)> = vec![(0, false)]; // (sum, has_red)
     let mut i = 0;
 
     while i < input.len() {
         match input[i] {
             b'{' => {
-                curly_level += 1;
-                i += 1
+                stack.push((0, false));
+                i += 1;
             }
-            b'r' if matches!(input.get(i + 1), Some(b'e'))
-                && matches!(input.get(i + 2), Some(b'd')) => {}
-            b'}' => {}
+            b'}' => {
+                let (sum, has_red) = stack.pop().unwrap();
+                if !has_red {
+                    stack.last_mut().unwrap().0 += sum;
+                }
+                i += 1;
+            }
+            b':' => {
+                i += 1;
+                while i < input.len() && input[i].is_ascii_whitespace() {
+                    i += 1;
+                }
+                if i < input.len() && input[i] == b'"' {
+                    if input[i..].starts_with(b"\"red\"") {
+                        stack.last_mut().unwrap().1 = true;
+                        i += 5;
+                        continue;
+                    }
+                }
+            }
             _ if byte_can_be_number(&input[i]) => {
-                let num: String = input[i..]
-                    .iter()
-                    .copied()
-                    .take_while(byte_can_be_number)
-                    .map(|b| b as char)
-                    .collect();
-                map.entry(curly_level)
-                    .or_default()
-                    .push(num.parse().unwrap());
-                i += num.len()
+                let start = i;
+                while i < input.len() && byte_can_be_number(&input[i]) {
+                    i += 1;
+                }
+                let num: i32 = std::str::from_utf8(&input[start..i])
+                    .unwrap()
+                    .parse()
+                    .unwrap();
+                stack.last_mut().unwrap().0 += num;
             }
             _ => i += 1,
         }
     }
-    todo!()
+
+    stack[0].0
 }
 
 fn main() {
@@ -102,7 +116,22 @@ mod tests {
 
     #[test]
     fn test_part2_example1() {
-        let input1 = "[144,2,3]";
+        let input1 = "[1,2,3]";
+        assert_eq!(part2(input1.as_bytes()), 6);
+    }
+    #[test]
+    fn test_part2_example2() {
+        let input1 = "[1,{\"c\":\"red\",\"b\":2},3]";
+        assert_eq!(part2(input1.as_bytes()), 4);
+    }
+    #[test]
+    fn test_part2_example3() {
+        let input1 = "{\"d\":\"red\",\"e\":[1,2,3,4],\"f\":5}";
+        assert_eq!(part2(input1.as_bytes()), 0);
+    }
+    #[test]
+    fn test_part2_example4() {
+        let input1 = "[1,\"red\",5]";
         assert_eq!(part2(input1.as_bytes()), 6);
     }
 }
